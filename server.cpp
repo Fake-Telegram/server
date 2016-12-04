@@ -126,6 +126,8 @@ void Tcp_connection::handle_get(
         global_stream_lock.unlock();
         receive_string = receive_string + 
             std::string(recv_buffer, num_got);
+        send_buffer = send_buffer + std::string(recv_buffer, num_got);
+        send_message(send_buffer);
         get_message();
     }
 }
@@ -147,7 +149,6 @@ void Tcp_connection::handle_send(
         global_stream_lock.unlock();
         //std::cerr << "Result: " << buffer <<  "#" << std::endl;   
         buffer.erase(0, num_sent);
-        std::cerr << "Result: " << buffer <<  "?" << std::endl;   
         if (!buffer.empty()) {
             socket_.async_write_some(
                 boost::asio::buffer(buffer),
