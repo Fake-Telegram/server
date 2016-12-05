@@ -7,9 +7,13 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include "settings.hpp"
+#include "database.hpp"
+
 #define BUF_SIZE 2048
 
 boost::mutex global_stream_lock;
+unsigned Database::id = 1;
 
 
 class Tcp_connection
@@ -21,20 +25,24 @@ public:
     std::string receive_string;
     size_t recv_buffer_index;
     std::string send_buffer;
+    boost::asio::ip::tcp::socket socket;
 
     static pointer create(
-        boost::asio::io_service& io_service
+        boost::asio::io_service& io_service,
+        Database &db
     ); 
-    boost::asio::ip::tcp::socket& socket();
     void send_message(std::string &buffer);
     void get_message();
     void start(); 
     ~Tcp_connection();
 
 private:
-    boost::asio::ip::tcp::socket socket_;
+    Database &db;
 
-    Tcp_connection(boost::asio::io_service& io_service);
+    Tcp_connection(
+        boost::asio::io_service& io_service,
+        Database &db
+    );
     void handle_get(
         const boost::system::error_code &ec,
         size_t num_got);
@@ -42,21 +50,19 @@ private:
         const boost::system::error_code &ec,
         std::string &buffer,
         std::size_t num_sent);
+    std::string handle_input(void);
 };
 
 
 
 Tcp_connection::pointer Tcp_connection::create(
-    boost::asio::io_service& io_service
+    boost::asio::io_service& io_service,
+    Database &db
 ) 
 {
-    return pointer(new Tcp_connection(io_service));
+    return pointer(new Tcp_connection(io_service, db));
 }
 
-boost::asio::ip::tcp::socket& Tcp_connection::socket()
-{
-    return socket_;
-}
 
 void Tcp_connection::start() {
     send_buffer= std::string("Hello!");
@@ -68,7 +74,7 @@ void Tcp_connection::start() {
 
 void Tcp_connection::send_message(std::string &buffer)
 {
-    socket_.async_write_some(
+    socket.async_write_some(
         boost::asio::buffer(buffer),
         boost::bind(
             &Tcp_connection::handle_send,
@@ -82,7 +88,7 @@ void Tcp_connection::send_message(std::string &buffer)
 
 void Tcp_connection::get_message()
 {
-    socket_.async_read_some(
+    socket.async_read_some(
         boost::asio::buffer(recv_buffer, BUF_SIZE),
         boost::bind(
             &Tcp_connection::handle_get, 
@@ -94,19 +100,40 @@ void Tcp_connection::get_message()
 }
 
 Tcp_connection::Tcp_connection(
-    boost::asio::io_service& io_service
+    boost::asio::io_service& io_service,
+    Database &new_db
 )
-    : socket_(io_service)
+    : socket(io_service)
+    , db(new_db)
 {
 }
 
 Tcp_connection::~Tcp_connection()
 {
     boost::system::error_code ec;
-    socket_.shutdown(
+    socket.shutdown(
         boost::asio::ip::tcp::socket::shutdown_both, ec
     );
-    socket_.close(ec);
+    socket.close(ec);
+}
+       
+std::string Tcp_connection::handle_input(void)
+{
+    unsigned ID_operation;
+    rapidjson::Document doc;
+    doc.SetObject();
+    if(!doc.Parse(receive_string.c_str()).HasParseError()){
+        ID_operation = doc["operation"].GetInt();
+        switch (ID_operation) {
+        case AUTHORIZATION:
+            return db.authorization(doc, socket);
+        default:
+            break;
+        }
+    } else {
+        std::cerr << receive_string << std::endl;
+    }
+    return "Not handled";
 }
 
 void Tcp_connection::handle_get(
@@ -126,7 +153,7 @@ void Tcp_connection::handle_get(
         global_stream_lock.unlock();
         receive_string = receive_string + 
             std::string(recv_buffer, num_got);
-        send_buffer = send_buffer + std::string(recv_buffer, num_got);
+        send_buffer = handle_input();
         send_message(send_buffer);
         get_message();
     }
@@ -150,7 +177,7 @@ void Tcp_connection::handle_send(
         //std::cerr << "Result: " << buffer <<  "#" << std::endl;   
         buffer.erase(0, num_sent);
         if (!buffer.empty()) {
-            socket_.async_write_some(
+            socket.async_write_some(
                 boost::asio::buffer(buffer),
                 boost::bind(
                     &Tcp_connection:: handle_send,
@@ -167,6 +194,9 @@ void Tcp_connection::handle_send(
 
 class Tcp_server
 {
+public:
+    Database db;
+
 private:
     boost::asio::ip::tcp::acceptor acceptor_;
 
@@ -187,9 +217,12 @@ private:
     void start_accept()
     {
         Tcp_connection::pointer new_connection = 
-            Tcp_connection::create(acceptor_.get_io_service());
+            Tcp_connection::create(
+                acceptor_.get_io_service(),
+                db
+            );
 
-        acceptor_.async_accept(new_connection->socket(),
+        acceptor_.async_accept(new_connection->socket,
             boost::bind(
                 &Tcp_server::handle_accept, 
                 this,
