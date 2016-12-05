@@ -151,7 +151,7 @@ void Tcp_connection::handle_get(
             "] Receive " << num_got << 
             "bytes." << std::endl;
         global_stream_lock.unlock();
-        receive_string = receive_string + 
+        receive_string = /*receive_string + */
             std::string(recv_buffer, num_got);
         send_buffer = handle_input();
         send_message(send_buffer);
