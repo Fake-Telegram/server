@@ -5,7 +5,6 @@
 #include <string.h>
 #include <cstring>
 #include "bd.h"
-#include "sUser.h"
 
 int main (void){
 
@@ -120,21 +119,6 @@ int authorization (const char* email, const char* password){
                     return (*i).get<int>(2);
                 else return 0;
             }
-    }
-
-}
-
-sUser* get_user_by_id (const int id){
-	sqlite3pp::database db("test.db");
-    sqlite3pp::query qry(db, "SELECT email, pass, id FROM users");
-    for (sqlite3pp::query::iterator i = qry.begin(); i != qry.end(); ++i) {
-    	if ((*i).get<int>(2)==id){
-                
-            sUser user ((*i).get<int>(2), (*i).get<char const*>(0), (*i).get<char const*>(1), (*i).get<char const*>(1));
-			return &user;
-
-        }
-
     }
 
 }
