@@ -127,6 +127,8 @@ std::string Tcp_connection::handle_input(void)
         switch (ID_operation) {
         case AUTHORIZATION:
             return db.authorization(doc, socket);
+        case REGISTRATION:
+            return db.registration(doc, socket);
         default:
             break;
         }
