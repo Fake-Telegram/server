@@ -9,7 +9,7 @@
 
 int main (void){
 
-	sqlite3pp::database db("test.db");
+	sqlite3pp::database db("./../test.db");
 	{
         //создаем таблицу пользователей
         db.execute("CREATE TABLE IF NOT EXISTS users ( id varint primary key, email varchar(65), pass varchar(65), nickname varchar(65))");
@@ -79,6 +79,7 @@ int main (void){
 
 
 int create_message(const char* message, int id_user_from, int id_chat){
+    int j = 9;
     sqlite3pp::database db("test.db");
     sqlite3pp::command cmd(db, "INSERT INTO messages (id, message, id_user_from, id_chat) VALUES (?, ?, ?, ?)");
     cmd.binder() << j << message << id_user_from << id_chat;
@@ -124,7 +125,7 @@ int authorization (const char* email, const char* password){
 
 }
 
-sUser* get_user_by_id (const int id){
+/*sUser* get_user_by_id (const int id){
 	sqlite3pp::database db("test.db");
     sqlite3pp::query qry(db, "SELECT email, pass, id FROM users");
     for (sqlite3pp::query::iterator i = qry.begin(); i != qry.end(); ++i) {
@@ -138,7 +139,7 @@ sUser* get_user_by_id (const int id){
     }
 
 }
-
+*/
 //авторизация / проверка логина пороля / регистрация
 //достать все сообщения чата
 //выводить list сообщений

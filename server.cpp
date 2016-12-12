@@ -7,6 +7,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include "settings.hpp"
 #include "database.hpp"
 
@@ -26,6 +27,7 @@ public:
     size_t recv_buffer_index;
     std::string send_buffer;
     boost::asio::ip::tcp::socket socket;
+    unsigned user_id;
 
     static pointer create(
         boost::asio::io_service& io_service,
@@ -38,7 +40,7 @@ public:
 
 private:
     Database &db;
-
+    boost::asio::deadline_timer timer;
     Tcp_connection(
         boost::asio::io_service& io_service,
         Database &db
@@ -51,6 +53,7 @@ private:
         std::string &buffer,
         std::size_t num_sent);
     std::string handle_input(void);
+    void check_post(const boost::system::error_code& error);
 };
 
 
@@ -63,10 +66,52 @@ Tcp_connection::pointer Tcp_connection::create(
     return pointer(new Tcp_connection(io_service, db));
 }
 
+void Tcp_connection::check_post(const boost::system::error_code& error)
+{
+    unsigned chat_id;
+    std::list<State>::iterator s_it;
+    std::list<Message>::iterator m_it;
+    std::list<Message>::reverse_iterator r_m_it;
+
+    std::list<State> &l_s = db.states[user_id];
+    //std::cerr << "Size " << user_id << l_s.size() << std::endl;
+    s_it = l_s.begin();
+    while (s_it != l_s.end()) {
+        chat_id = s_it->chat_id;
+        std::list<Message> &l_m = db.messages[chat_id];
+        r_m_it = l_m.rbegin();
+        while(r_m_it != l_m.rend() 
+        && r_m_it->id != s_it->current_mes) {
+            r_m_it++;
+        }
+        if(r_m_it != l_m.rend()) {
+            m_it = (++r_m_it).base();
+            while (m_it != l_m.end()) {
+                send_buffer = m_it->text;
+                send_message(send_buffer);
+                s_it->current_mes = m_it->id + 1;
+                m_it++;
+            }
+        }
+        s_it++;
+    }
+    timer.expires_at(timer.expires_at() + 
+        boost::posix_time::seconds(1));
+    timer.async_wait(boost::bind(
+        &Tcp_connection::check_post,
+        shared_from_this(),
+        boost::asio::placeholders::error
+    ));
+}
 
 void Tcp_connection::start() {
     send_buffer= std::string("Hello!");
 
+    timer.async_wait(boost::bind(
+        &Tcp_connection::check_post,
+        shared_from_this(),
+        boost::asio::placeholders::error
+    ));
     get_message();
     send_message(send_buffer);
     std::cerr << receive_string << std::endl;
@@ -105,6 +150,7 @@ Tcp_connection::Tcp_connection(
 )
     : socket(io_service)
     , db(new_db)
+    , timer(io_service, boost::posix_time::seconds(10))
 {
 }
 
@@ -122,13 +168,20 @@ std::string Tcp_connection::handle_input(void)
     unsigned ID_operation;
     rapidjson::Document doc;
     doc.SetObject();
+    std::string res;
+    std::cerr << receive_string << std::endl;
     if(!doc.Parse(receive_string.c_str()).HasParseError()){
         ID_operation = doc["operation"].GetInt();
+        printf("%d %d\n", ID_operation, MESSAGE);
         switch (ID_operation) {
         case AUTHORIZATION:
-            return db.authorization(doc, socket);
+            res =  db.authorization(doc, socket, user_id);
+            printf("Again user_id is %d.\n", user_id);
+            return res;
         case REGISTRATION:
-            return db.registration(doc, socket);
+            return db.user_registration(doc, socket, user_id);
+        case MESSAGE:
+            return db.user_message(doc, socket);
         default:
             break;
         }
