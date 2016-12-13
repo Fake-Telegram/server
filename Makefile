@@ -12,10 +12,10 @@ server: server.o database.o db.o
 server.o: server.cpp database.hpp settings.hpp
 	$(CC) $< $(CFLAGS) -o $@
 
-database.o: database.cpp database.hpp headeronly_src/bd.h
+database.o: database.cpp database.hpp headeronly_src/db.h
 	$(CC) $< -Ilib/sqlite3 $(CFLAGS) -o $@ 
 
-db.o: headeronly_src/db.cpp headeronly_src/bd.h
+db.o: headeronly_src/db.cpp headeronly_src/db.h
 	$(CC) $< -Ilib/sqlite3 $(CFLAGS) -o $@ 
 
 clean: 
