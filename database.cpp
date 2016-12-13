@@ -183,7 +183,7 @@ Database::Database()
    );
    auth_pair.insert(
       std::pair<std::string, Data>
-      ("durov@mail.ru", data_0)
+      ("123", data_0)
    );
    std::list<unsigned> l_u;
    l_u.push_back(1);
