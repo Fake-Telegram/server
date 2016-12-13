@@ -174,7 +174,7 @@ std::string Database::user_registration(
 Database::Database()
 {
    Data data("admin", id++);
-   Data data_0("123", id++);
+   Data data_0("durov@mail.ru", id++);
    State st;
    std::list<State> l_s;
    auth_pair.insert(
@@ -183,7 +183,7 @@ Database::Database()
    );
    auth_pair.insert(
       std::pair<std::string, Data>
-      ("123", data_0)
+      ("durov@mail.ru", data_0)
    );
    std::list<unsigned> l_u;
    l_u.push_back(1);
