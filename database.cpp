@@ -9,11 +9,11 @@ Data::Data(std::string pw, unsigned new_id) {
 std::string convertTmToString(const tm &datetime){
 std::ostringstream oss;
 oss << 
-    datetime.tm_mday << 
+    datetime.tm_year + 1900 <<
     "/" << 
     datetime.tm_mon + 1 << 
     "/" << 
-    datetime.tm_year + 1900 << 
+    datetime.tm_mday <<
     " " << 
     datetime.tm_hour << 
     ":" << 
@@ -54,8 +54,6 @@ std::string Database::user_message(
     parlamenter.Int(MESSAGE);
     parlamenter.Key("chatId");
     parlamenter.Uint(doc["chatId"].GetUint());
-    parlamenter.Key("messId");
-    parlamenter.Uint(doc["localId"].GetUint());
     parlamenter.Key("datetime");
     parlamenter.String(convertTmToString(datetime).c_str());
     if (it == chats.end()) {
@@ -70,8 +68,11 @@ std::string Database::user_message(
     } else {
         mes.id = 0;
     }
+    parlamenter.Key("id");
+    parlamenter.Uint(mes.id);//generate
     parlamenter.Key("text");
     parlamenter.String(doc["text"].GetString());
+    parlamenter.EndObject();
     mes.text = answer.GetString();
     m_it->second.push_back(mes);
     writer.Key("result");

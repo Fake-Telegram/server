@@ -5,22 +5,20 @@
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
+
 enum commands{
-    REGISTRATION,
-    AUTHORIZATION,
-    MESSAGE,
-    ADD_FRIEND,
-    FIND_FRIEND,
-    CREAT_CHAT,
-    EXIT
+        REGISTRATION,
+        AUTHORIZATION,
+        MESSAGE,
+        ADD_FRIEND,
+        FIND_FRIEND,
+        CREATE_CHAT,
+        EXIT,
+        // Servsr's answer.
+        NEW_FRIEND,
+        REQUST,
+        NEW_CHAT,
+        SENT,
+        READ
 };
-
-enum results{
-    NEW_FRIEND,
-    REQUST,
-    NEW_CHAT,
-    SENT,
-    READ
-};
-
 #endif // SETTINGS_H

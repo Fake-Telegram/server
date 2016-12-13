@@ -122,7 +122,7 @@ int authorization (const char* email, const char* password){
                 else return 0;
             }
     }
-
+	return 0;
 }
 
 /*sUser* get_user_by_id (const int id){
